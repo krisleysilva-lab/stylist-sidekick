@@ -63,13 +63,13 @@ export const Dashboard = () => {
   ];
 
   return (
-    <section className="py-20 bg-muted/30">
+    <section className="py-12 md:py-20 bg-muted/30">
       <div className="container mx-auto px-4">
-        <div className="text-center space-y-6 mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground">
+        <div className="text-center space-y-4 md:space-y-6 mb-8 md:mb-16">
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">
             Tudo que você precisa em um só lugar
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
             Ferramentas inteligentes que transformam seu conhecimento técnico 
             em resultados extraordinários e comunicação profissional.
           </p>

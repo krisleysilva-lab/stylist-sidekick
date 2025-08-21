@@ -18,10 +18,10 @@ export const Hero = () => {
         }}
       />
       
-      <div className="relative container mx-auto px-4 py-20">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="relative container mx-auto px-4 py-12 md:py-20">
+        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Content */}
-          <div className="text-center lg:text-left space-y-8">
+          <div className="text-center lg:text-left space-y-6 md:space-y-8">
             <Badge 
               variant="secondary" 
               className="bg-white/20 border-white/30 text-white hover:bg-white/30"
@@ -30,8 +30,8 @@ export const Hero = () => {
               Powered by AI
             </Badge>
             
-            <div className="space-y-6">
-              <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight">
+            <div className="space-y-4 md:space-y-6">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold text-white leading-tight">
                 Revolução na
                 <span className="block bg-gradient-to-r from-secondary-gold to-white bg-clip-text text-transparent">
                   Colorimetria
@@ -39,14 +39,14 @@ export const Hero = () => {
                 Profissional
               </h1>
               
-              <p className="text-xl text-white/90 leading-relaxed max-w-xl">
+              <p className="text-base md:text-xl text-white/90 leading-relaxed max-w-xl">
                 O primeiro assistente de IA especializado em coloração capilar. 
                 Diagnósticos precisos, fórmulas inteligentes e comunicação assertiva 
                 com seus clientes.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+            <div className="hidden sm:flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Button size="lg" variant="hero" className="group">
                 <Camera className="w-5 h-5 mr-2 group-hover:rotate-12 transition-smooth" />
                 Começar Diagnóstico

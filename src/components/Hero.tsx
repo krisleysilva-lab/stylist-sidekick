@@ -3,9 +3,15 @@ import { Badge } from "@/components/ui/badge";
 import { Brain, Sparkles, Camera } from "lucide-react";
 import heroImage from "@/assets/hero-image.jpg";
 import appMockup from "@/assets/app-mockup.jpg";
+import { DiagnosticModal } from "./DiagnosticModal";
+import { useState } from "react";
 
 export const Hero = () => {
+  const [showDiagnostic, setShowDiagnostic] = useState(false);
+
   return (
+    <>
+      <DiagnosticModal open={showDiagnostic} onOpenChange={setShowDiagnostic} />
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background with gradient overlay */}
       <div className="absolute inset-0 bg-gradient-hero" />
@@ -47,7 +53,12 @@ export const Hero = () => {
             </div>
 
             <div className="hidden sm:flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button size="lg" variant="hero" className="group">
+              <Button 
+                size="lg" 
+                variant="hero" 
+                className="group"
+                onClick={() => setShowDiagnostic(true)}
+              >
                 <Camera className="w-5 h-5 mr-2 group-hover:rotate-12 transition-smooth" />
                 Começar Diagnóstico
               </Button>
@@ -91,5 +102,6 @@ export const Hero = () => {
         </div>
       </div>
     </section>
+    </>
   );
 };

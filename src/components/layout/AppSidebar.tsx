@@ -112,7 +112,7 @@ export const AppSidebar: React.FC = () => {
           </div>
           {!isCollapsed && (
             <div>
-              <h2 className="font-bold text-lg text-foreground">Cabelleira</h2>
+              <h2 className="font-bold text-lg text-foreground">Cabelleira.IA</h2>
               {currentPlan && (
                 <Badge 
                   variant={currentPlan.id === 'free' ? 'secondary' : 'default'} 

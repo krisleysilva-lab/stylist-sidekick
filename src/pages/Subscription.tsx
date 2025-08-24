@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Crown, Sparkles } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { MonetizationEngine } from '@/components/MonetizationEngine';
 
 const Subscription: React.FC = () => {
   const { currentPlan, plans, subscribeTo } = useSubscription();
@@ -78,6 +79,9 @@ const Subscription: React.FC = () => {
           </Card>
         ))}
       </div>
+
+      {/* Monetization Engine */}
+      <MonetizationEngine />
     </div>
   );
 };

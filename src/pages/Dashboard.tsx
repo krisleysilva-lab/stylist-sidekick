@@ -16,6 +16,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Progress } from '@/components/ui/progress';
+import { WorkflowSystem } from '@/components/WorkflowSystem';
+import { SmartNotifications } from '@/components/SmartNotifications';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -262,6 +264,12 @@ const Dashboard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* AI Workflow System */}
+      <WorkflowSystem />
+
+      {/* Smart Notifications */}
+      <SmartNotifications />
     </div>
   );
 };

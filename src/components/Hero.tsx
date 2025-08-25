@@ -28,22 +28,31 @@ export const Hero = () => {
         <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Content */}
           <div className="text-center lg:text-left space-y-6 md:space-y-8">
+            {/* Fixed App Name Header */}
+            <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-primary/95 backdrop-blur-sm border-b border-white/20">
+              <div className="container mx-auto px-4 py-3">
+                <h1 className="text-lg md:text-xl font-bold text-white text-center">
+                  Cabelleira.IA ✨ Powered by AI
+                </h1>
+              </div>
+            </div>
+
             <Badge 
               variant="secondary" 
-              className="bg-white/20 border-white/30 text-white hover:bg-white/30"
+              className="bg-white/20 border-white/30 text-white hover:bg-white/30 mt-16"
             >
               <Sparkles className="w-4 h-4 mr-2" />
-              Powered by AI
+              Inteligência Artificial
             </Badge>
             
             <div className="space-y-4 md:space-y-6">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold text-white leading-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold text-white leading-tight">
                 Revolução na
                 <span className="block bg-gradient-to-r from-secondary-gold to-white bg-clip-text text-transparent">
                   Colorimetria
                 </span>
                 Profissional
-              </h1>
+              </h2>
               
               <p className="text-base md:text-xl text-white/90 leading-relaxed max-w-xl">
                 O primeiro assistente de IA especializado em coloração capilar. 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 import { 
   Camera, 
   Upload, 
@@ -20,7 +22,13 @@ import {
   ArrowRight,
   User,
   Phone,
-  Mail
+  Mail,
+  ImageIcon,
+  Loader2,
+  Target,
+  Palette,
+  Scissors,
+  X
 } from 'lucide-react';
 
 interface DiagnosticModalProps {
@@ -30,40 +38,106 @@ interface DiagnosticModalProps {
 
 export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ open, onOpenChange }) => {
   const [step, setStep] = useState(1);
+  const { toast } = useToast();
+  const currentImageRef = useRef<HTMLInputElement>(null);
+  const referenceImageRef = useRef<HTMLInputElement>(null);
+  
   const [clientData, setClientData] = useState({
     name: '',
     phone: '',
     email: '',
     hairType: '',
     concerns: '',
-    previousTreatments: ''
+    previousTreatments: '',
+    preferredBrand: ''
   });
 
-  const [diagnosisResult, setDiagnosisResult] = useState<any>(null);
+  const [images, setImages] = useState({
+    current: null as string | null,
+    reference: null as string | null
+  });
 
-  const handlePhotoUpload = () => {
-    // Simulate AI analysis
-    setTimeout(() => {
-      setDiagnosisResult({
-        hairType: 'Cabelo misto - oleoso na raiz, ressecado nas pontas',
-        condition: 'Desidratação severa com danos químicos',
-        porosity: 'Alta porosidade',
-        recommendations: [
-          'Hidratação intensiva com proteínas',
-          'Reconstrução capilar em 3 etapas',
-          'Coloração com tonalizante sem amônia',
-          'Cronograma capilar personalizado'
-        ],
-        products: [
-          'Máscara de Hidratação Intensiva',
-          'Ampola de Reconstrução',
-          'Leave-in com Proteção UV',
-          'Shampoo Low Poo'
-        ],
-        confidence: 94
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageUpload = async (type: 'current' | 'reference', file?: File) => {
+    try {
+      let selectedFile = file;
+      
+      if (!selectedFile) {
+        const input = type === 'current' ? currentImageRef.current : referenceImageRef.current;
+        if (!input || !input.files || !input.files[0]) return;
+        selectedFile = input.files[0];
+      }
+
+      const base64 = await convertImageToBase64(selectedFile);
+      setImages(prev => ({ ...prev, [type]: base64 }));
+      
+      toast({
+        title: "Imagem carregada",
+        description: `Foto ${type === 'current' ? 'atual' : 'de referência'} adicionada com sucesso`,
       });
-      setStep(3);
-    }, 2000);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar imagem",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleProfessionalAnalysis = async () => {
+    if (!images.current) {
+      toast({
+        title: "Erro",
+        description: "Foto atual é obrigatória para análise",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-hair', {
+        body: {
+          currentImage: images.current,
+          referenceImage: images.reference,
+          clientInfo: clientData
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setAnalysisResult(data.analysis);
+        setStep(3);
+        toast({
+          title: "Análise concluída",
+          description: "Diagnóstico profissional gerado com sucesso",
+        });
+      } else {
+        throw new Error(data.error || 'Erro na análise');
+      }
+    } catch (error) {
+      console.error('Erro na análise:', error);
+      toast({
+        title: "Erro na análise",
+        description: "Não foi possível completar a análise. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const renderStep = () => {
@@ -77,7 +151,7 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ open, onOpenCh
               </div>
               <h3 className="text-xl font-semibold mb-2">Dados da Cliente</h3>
               <p className="text-muted-foreground">
-                Vamos começar coletando algumas informações básicas
+                Informações para análise personalizada
               </p>
             </div>
 
@@ -112,9 +186,18 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ open, onOpenCh
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Observações sobre o cabelo</label>
+                <label className="block text-sm font-medium mb-2">Marca de preferência</label>
+                <Input
+                  placeholder="Ex: Wella, L'Oréal, Schwarzkopf..."
+                  value={clientData.preferredBrand}
+                  onChange={(e) => setClientData({...clientData, preferredBrand: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Histórico e observações</label>
                 <Textarea
-                  placeholder="Descreva o tipo de cabelo, histórico de químicas, preocupações..."
+                  placeholder="Histórico de químicas, tipo de cabelo, desejos, preocupações..."
                   value={clientData.concerns}
                   onChange={(e) => setClientData({...clientData, concerns: e.target.value})}
                   className="min-h-20"
@@ -140,109 +223,267 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ open, onOpenCh
               <div className="w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
                 <Camera className="w-10 h-10 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Análise Capilar com IA</h3>
+              <h3 className="text-xl font-semibold mb-2">Análise Profissional com IA</h3>
               <p className="text-muted-foreground">
-                Envie fotos do cabelo para análise precisa da nossa IA
+                Upload das fotos para diagnóstico técnico completo
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="p-6 text-center border-dashed border-2 hover:border-primary transition-smooth cursor-pointer">
-                <CardContent className="p-0">
-                  <Camera className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm font-medium">Tirar Foto</p>
-                  <p className="text-xs text-muted-foreground mt-1">Usar câmera</p>
-                </CardContent>
-              </Card>
+            <div className="space-y-4">
+              {/* Foto Atual - Obrigatória */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-red-600">
+                  📸 Foto Atual da Cliente (Obrigatória)
+                </label>
+                <Card className={`p-4 border-2 border-dashed transition-smooth cursor-pointer ${
+                  images.current ? 'border-green-500 bg-green-50' : 'border-primary hover:border-primary/70'
+                }`}>
+                  <CardContent className="p-0" onClick={() => currentImageRef.current?.click()}>
+                    {images.current ? (
+                      <div className="relative">
+                        <img 
+                          src={images.current} 
+                          alt="Foto atual" 
+                          className="w-full h-32 object-cover rounded-md"
+                        />
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="absolute top-2 right-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setImages(prev => ({ ...prev, current: null }));
+                          }}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <Camera className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                        <p className="text-sm font-medium">Adicionar Foto Atual</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Cabelo, rosto e tom de pele visíveis
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                <input
+                  ref={currentImageRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleImageUpload('current', e.target.files?.[0])}
+                />
+              </div>
 
-              <Card className="p-6 text-center border-dashed border-2 hover:border-primary transition-smooth cursor-pointer">
-                <CardContent className="p-0">
-                  <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm font-medium">Upload</p>
-                  <p className="text-xs text-muted-foreground mt-1">Galeria</p>
-                </CardContent>
-              </Card>
+              {/* Foto Referência - Opcional */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-muted-foreground">
+                  🎯 Foto de Referência (Opcional)
+                </label>
+                <Card className={`p-4 border-2 border-dashed transition-smooth cursor-pointer ${
+                  images.reference ? 'border-blue-500 bg-blue-50' : 'border-muted hover:border-muted-foreground'
+                }`}>
+                  <CardContent className="p-0" onClick={() => referenceImageRef.current?.click()}>
+                    {images.reference ? (
+                      <div className="relative">
+                        <img 
+                          src={images.reference} 
+                          alt="Foto referência" 
+                          className="w-full h-32 object-cover rounded-md"
+                        />
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="absolute top-2 right-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setImages(prev => ({ ...prev, reference: null }));
+                          }}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <Target className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                        <p className="text-sm font-medium">Adicionar Referência</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Resultado desejado (opcional)
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                <input
+                  ref={referenceImageRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleImageUpload('reference', e.target.files?.[0])}
+                />
+              </div>
             </div>
 
             <div className="bg-muted/30 p-4 rounded-lg">
               <h4 className="font-medium mb-2 flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-primary" />
-                Dicas para melhor análise:
+                Dicas para análise perfeita:
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Boa iluminação natural</li>
                 <li>• Cabelo limpo e seco</li>
-                <li>• Fotos de frente e perfil</li>
-                <li>• Detalhe do couro cabeludo</li>
+                <li>• Rosto e cabelo visíveis</li>
+                <li>• Tom de pele bem iluminado</li>
               </ul>
             </div>
 
             <Button 
               className="w-full bg-gradient-primary"
-              onClick={handlePhotoUpload}
+              onClick={handleProfessionalAnalysis}
+              disabled={!images.current || isAnalyzing}
             >
-              <Brain className="w-4 h-4 mr-2" />
-              Iniciar Análise IA
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Analisando...
+                </>
+              ) : (
+                <>
+                  <Brain className="w-4 h-4 mr-2" />
+                  Iniciar Análise Profissional
+                </>
+              )}
             </Button>
           </div>
         );
 
       case 3:
+        if (!analysisResult) return null;
+        
         return (
           <div className="space-y-6">
             <div className="text-center">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-10 h-10 text-green-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Diagnóstico Completo</h3>
+              <h3 className="text-xl font-semibold mb-2">Diagnóstico Profissional</h3>
               <Badge className="bg-green-100 text-green-800">
-                {diagnosisResult.confidence}% de precisão
+                Análise Completa
               </Badge>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {/* Diagnóstico Técnico */}
               <Card>
                 <CardContent className="p-4">
-                  <h4 className="font-semibold mb-2">Análise Capilar</h4>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <Brain className="w-4 h-4 text-primary" />
+                    Diagnóstico Técnico
+                  </h4>
                   <div className="space-y-2 text-sm">
-                    <p><strong>Tipo:</strong> {diagnosisResult.hairType}</p>
-                    <p><strong>Condição:</strong> {diagnosisResult.condition}</p>
-                    <p><strong>Porosidade:</strong> {diagnosisResult.porosity}</p>
+                    <p><strong>Altura de Tom:</strong> {analysisResult.diagnostico_tecnico?.altura_tom_atual}</p>
+                    <p><strong>Nuances/Reflexos:</strong> {analysisResult.diagnostico_tecnico?.nuances_reflexos_atual}</p>
+                    <p><strong>Fundo de Clareamento:</strong> {analysisResult.diagnostico_tecnico?.fundo_clareamento}</p>
+                    <p><strong>Estrutura:</strong> {analysisResult.diagnostico_tecnico?.estrutura_fio}</p>
                   </div>
                 </CardContent>
               </Card>
 
+              {/* Fórmula Técnica */}
               <Card>
                 <CardContent className="p-4">
-                  <h4 className="font-semibold mb-2">Recomendações de Tratamento</h4>
-                  <ul className="space-y-1 text-sm">
-                    {diagnosisResult.recommendations.map((rec: string, idx: number) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                        {rec}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <h4 className="font-semibold mb-2">Produtos Recomendados</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {diagnosisResult.products.map((product: string, idx: number) => (
-                      <Badge key={idx} variant="outline" className="justify-start p-2">
-                        {product}
-                      </Badge>
-                    ))}
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-primary" />
+                    Fórmula Técnica
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    {analysisResult.formula_tecnica?.descoloracao && (
+                      <p><strong>Descoloração:</strong> {analysisResult.formula_tecnica.descoloracao}</p>
+                    )}
+                    {analysisResult.formula_tecnica?.tonalizacao && (
+                      <p><strong>Tonalização:</strong> {analysisResult.formula_tecnica.tonalizacao}</p>
+                    )}
+                    {analysisResult.formula_tecnica?.tempo_acao && (
+                      <p><strong>Tempo:</strong> {analysisResult.formula_tecnica.tempo_acao}</p>
+                    )}
+                    {analysisResult.formula_tecnica?.tecnica_aplicacao && (
+                      <p><strong>Técnica:</strong> {analysisResult.formula_tecnica.tecnica_aplicacao}</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Visagismo */}
+              <Card>
+                <CardContent className="p-4">
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <Scissors className="w-4 h-4 text-primary" />
+                    Análise de Visagismo
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p><strong>Formato do Rosto:</strong> {analysisResult.visagismo?.formato_rosto}</p>
+                      <p><strong>Tom de Pele:</strong> {analysisResult.visagismo?.temperatura_pele}</p>
+                    </div>
+                    
+                    {analysisResult.visagismo?.cores_harmonicas && (
+                      <div>
+                        <p className="font-medium mb-2">Cores Harmônicas:</p>
+                        <div className="space-y-1">
+                          {analysisResult.visagismo.cores_harmonicas.map((cor: string, idx: number) => (
+                            <Badge key={idx} variant="outline" className="mr-2 mb-1">
+                              {cor}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {analysisResult.visagismo?.cortes_recomendados && (
+                      <div>
+                        <p className="font-medium mb-2">Cortes Recomendados:</p>
+                        <ul className="space-y-1">
+                          {analysisResult.visagismo.cortes_recomendados.map((corte: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0 mt-1" />
+                              {corte}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Observações */}
+              {analysisResult.observacoes_profissionais && (
+                <Card>
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold mb-3">Observações Profissionais</h4>
+                    <div className="space-y-2 text-sm">
+                      {analysisResult.observacoes_profissionais.cuidados_especiais && (
+                        <p><strong>Cuidados:</strong> {analysisResult.observacoes_profissionais.cuidados_especiais}</p>
+                      )}
+                      {analysisResult.observacoes_profissionais.retoque_estimado && (
+                        <p><strong>Retoque:</strong> {analysisResult.observacoes_profissionais.retoque_estimado}</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1">
-                Compartilhar
+              <Button variant="outline" className="flex-1" onClick={() => {
+                setStep(1);
+                setAnalysisResult(null);
+                setImages({ current: null, reference: null });
+              }}>
+                Nova Análise
               </Button>
               <Button className="flex-1 bg-gradient-primary">
                 Agendar Serviço
@@ -258,14 +499,14 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ open, onOpenCh
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Brain className="w-5 h-5 text-primary" />
-            Diagnóstico Capilar IA
+            Diagnóstico Capilar Profissional
           </DialogTitle>
           <DialogDescription>
-            Análise profissional com inteligência artificial
+            Análise técnica completa com visagismo por IA
           </DialogDescription>
         </DialogHeader>
         
